@@ -1,0 +1,67 @@
+name: Idempotent Mattermost Migration and Upgrade
+on:
+  push:
+    branches: [migration]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: mattermost-practice4-migration
+  cancel-in-progress: false
+jobs:
+  migrate-and-deploy:
+    runs-on: [self-hosted, macOS, ARM64, github-actions-lesson]
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: bash
+    env:
+      DB_MYSQL_ROOT_PASSWORD: ${{ secrets.DB_MYSQL_ROOT_PASSWORD }}
+      DB_MYSQL_PASSWORD: ${{ secrets.DB_MYSQL_PASSWORD }}
+      DB_POSTGRES_PASSWORD: ${{ secrets.DB_POSTGRES_PASSWORD }}
+      MM_ADMIN_PASSWORD: ${{ secrets.MM_ADMIN_PASSWORD }}
+    steps:
+      - name: Checkout migration branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Prepare self-hosted tools
+        run: |
+          TOOLS_DIR="$HOME/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin"
+          echo "$TOOLS_DIR" >> "$GITHUB_PATH"
+          echo '/Applications/Docker.app/Contents/Resources/bin' >> "$GITHUB_PATH"
+          /Applications/Docker.app/Contents/Resources/bin/docker info --format 'Docker {{.ServerVersion}}'
+      - name: Check persistent migration marker
+        id: check_status
+        run: python3 scripts/migration.py status
+      - name: Create private runtime configuration
+        run: python3 scripts/migration.py configure
+      - name: Backup legacy MySQL and shared files
+        if: steps.check_status.outputs.already_migrated == 'false'
+        run: python3 scripts/migration.py backup
+      - name: Migrate MySQL to PostgreSQL with pgloader
+        if: steps.check_status.outputs.already_migrated == 'false'
+        run: python3 scripts/migration.py migrate
+      - name: Deploy Mattermost 12 and remove legacy orphan
+        run: python3 scripts/migration.py deploy
+      - name: Verify health messages attachment and avatar
+        env:
+          ALREADY_MIGRATED: ${{ steps.check_status.outputs.already_migrated }}
+        run: python3 scripts/migration.py verify
+      - name: Mark verified migration complete
+        run: python3 scripts/migration.py mark
+      - name: Collect sanitized evidence
+        id: evidence
+        if: always()
+        run: python3 scripts/migration.py collect
+      - name: Upload verification and migration logs
+        if: always() && steps.evidence.outcome == 'success'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: mattermost-migration-${{ github.run_id }}-${{ github.run_attempt }}
+          path: migration-artifacts/
+          if-no-files-found: error
+          retention-days: 30
+      - name: Remove temporary secrets files
+        if: always()
+        run: python3 scripts/migration.py cleanup

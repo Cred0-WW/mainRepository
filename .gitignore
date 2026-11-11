@@ -11,3 +11,6 @@ playwright-report/
 .ci-env-owner.json
 __pycache__/
 .ci-write-*
+
+.env.migration
+migration-artifacts/

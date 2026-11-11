@@ -1,0 +1,32 @@
+{
+  "sourceVersion": "9.5",
+  "userId": "jwgn5htabbdzmxezfifkstj71e",
+  "teamId": "fj46d98n9tbemnjts7ghbfxbie",
+  "channelId": "xanjh6z8ij8ozchb6rzdkodj3y",
+  "fileId": "n5rahahqzprcpjs6yuc84khako",
+  "channelPath": "/bsbo-13-25/channels/migration-practice",
+  "posts": [
+    {
+      "id": "szot9h14sjr1zj317ntz94b6xw",
+      "message": "Практика 4. Проверяю перенос Mattermost с MySQL на PostgreSQL."
+    },
+    {
+      "id": "31g1bcq8k3nyigo35x98oaswqe",
+      "message": "Исходная версия сервера — 9.5. Эти сообщения должны сохраниться после обновления."
+    },
+    {
+      "id": "tioy7q7fp3b5jdt947gcahdcqw",
+      "message": "Канал приватный. После миграции доступ к нему должен остаться прежним."
+    },
+    {
+      "id": "aygur5g9fpy9byugibm3sqh4kh",
+      "message": "Перед переносом нужно сохранить резервную копию базы и общий том с файлами."
+    },
+    {
+      "id": "6wnrfbe7ejf3un6917ih77wyxc",
+      "message": "Прикрепил контрольный файл. После обновления проверю его содержимое и аватар."
+    }
+  ],
+  "attachmentSHA256": "5c5a89a7474bb7bcda905b36cf34149666191ac871ba246ede772f1afbce8065",
+  "avatarSHA256": "efe21413c852ed4cdc71072ac1c5880948f71ac92f2c498fa7979debe3dd07f7"
+}

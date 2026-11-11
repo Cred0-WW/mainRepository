@@ -1,0 +1,51 @@
+name: mattermostpr4
+services:
+  mattermost:
+    image: mattermost/mattermost-team-edition:12.0.1
+    platform: linux/amd64
+    container_name: mattermost
+    ports: ["127.0.0.1:8065:8065"]
+    environment:
+      MM_SQLSETTINGS_DRIVERNAME: postgres
+      MM_SQLSETTINGS_DATASOURCE: "postgres://mmuser:${DB_POSTGRES_PASSWORD:?}@mattermost-postgres:5432/mattermost?sslmode=disable&connect_timeout=10"
+      MM_SERVICESETTINGS_SITEURL: http://localhost:8065
+      MM_SERVICESETTINGS_ENABLELOCALMODE: "true"
+      MM_TEAMSETTINGS_ENABLEOPENSERVER: "false"
+      MM_EMAILSETTINGS_SENDEMAILNOTIFICATIONS: "false"
+      MM_PLUGINSETTINGS_ENABLE: "false"
+      MM_LOGSETTINGS_ENABLEFILE: "false"
+      MM_DIAGNOSTICSETTINGS_ENABLEDIAGNOSTICS: "false"
+    volumes:
+      - mattermost_data:/mattermost/data
+      - mattermost_logs:/mattermost/logs
+    networks: [mattermost_network]
+    depends_on:
+      db-postgres:
+        condition: service_healthy
+    restart: unless-stopped
+  db-postgres:
+    image: postgres:15-alpine
+    container_name: mattermost-postgres
+    environment:
+      POSTGRES_USER: mmuser
+      POSTGRES_PASSWORD: ${DB_POSTGRES_PASSWORD:?}
+      POSTGRES_DB: mattermost
+    volumes: ["postgres_data:/var/lib/postgresql/data"]
+    networks: [mattermost_network]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mmuser -d mattermost"]
+      interval: 5s
+      timeout: 5s
+      retries: 40
+    restart: unless-stopped
+networks:
+  mattermost_network:
+    name: mattermostpr4_network
+    driver: bridge
+volumes:
+  mattermost_data:
+    name: mattermostpr4_data
+  mattermost_logs:
+    name: mattermostpr4_logs
+  postgres_data:
+    name: mattermostpr4_postgres

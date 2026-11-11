@@ -2,57 +2,36 @@
   "version": "2.0.0",
   "tasks": [
     {
-      "label": "Практическая: запустить и проверить",
+      "label": "Практика 4: открыть Mattermost",
       "type": "process",
-      "command": "/bin/sh",
+      "command": "/usr/bin/open",
       "args": [
-        "${workspaceFolder}/scripts/run-local.sh"
+        "http://localhost:8065"
       ],
-      "options": {
-        "cwd": "${workspaceFolder}",
-        "env": {
-          "PYTHON_BIN": "${env:HOME}/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3",
-          "NODE_BIN": "${env:HOME}/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node",
-          "PATH": "/Applications/Docker.app/Contents/Resources/bin:${env:HOME}/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin:${env:PATH}"
-        }
-      },
       "group": {
         "kind": "build",
         "isDefault": true
       },
-      "problemMatcher": [],
-      "presentation": {
-        "reveal": "always",
-        "clear": true
-      }
+      "problemMatcher": []
     },
     {
-      "label": "Практическая: открыть страницу",
+      "label": "Практика 4: показать контейнеры",
       "type": "process",
-      "command": "/bin/sh",
+      "command": "/Applications/Docker.app/Contents/Resources/bin/docker",
       "args": [
-        "${workspaceFolder}/scripts/project.sh",
-        "open"
+        "ps",
+        "--filter",
+        "label=com.docker.compose.project=mattermostpr4"
       ],
       "problemMatcher": []
     },
     {
-      "label": "Практическая: логи",
+      "label": "Практика 4: проверить API",
       "type": "process",
-      "command": "/bin/sh",
+      "command": "/usr/bin/curl",
       "args": [
-        "${workspaceFolder}/scripts/project.sh",
-        "logs"
-      ],
-      "problemMatcher": []
-    },
-    {
-      "label": "Практическая: остановить",
-      "type": "process",
-      "command": "/bin/sh",
-      "args": [
-        "${workspaceFolder}/scripts/project.sh",
-        "stop"
+        "-f",
+        "http://localhost:8065/api/v4/system/ping"
       ],
       "problemMatcher": []
     }
