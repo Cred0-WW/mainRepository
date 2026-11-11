@@ -1,0 +1,60 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Практическая: запустить и проверить",
+      "type": "process",
+      "command": "/bin/sh",
+      "args": [
+        "${workspaceFolder}/scripts/run-local.sh"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}",
+        "env": {
+          "PYTHON_BIN": "${env:HOME}/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3",
+          "NODE_BIN": "${env:HOME}/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node",
+          "PATH": "/Applications/Docker.app/Contents/Resources/bin:${env:HOME}/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin:${env:PATH}"
+        }
+      },
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "clear": true
+      }
+    },
+    {
+      "label": "Практическая: открыть страницу",
+      "type": "process",
+      "command": "/bin/sh",
+      "args": [
+        "${workspaceFolder}/scripts/project.sh",
+        "open"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "Практическая: логи",
+      "type": "process",
+      "command": "/bin/sh",
+      "args": [
+        "${workspaceFolder}/scripts/project.sh",
+        "logs"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "Практическая: остановить",
+      "type": "process",
+      "command": "/bin/sh",
+      "args": [
+        "${workspaceFolder}/scripts/project.sh",
+        "stop"
+      ],
+      "problemMatcher": []
+    }
+  ]
+}

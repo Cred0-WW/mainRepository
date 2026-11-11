@@ -1,0 +1,17 @@
+{
+  "name": "github-actions-lesson",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Browser and database integration checks for the Docker Compose lesson",
+  "scripts": {
+    "test": "playwright test",
+    "test:browser": "playwright test",
+    "test:report": "playwright show-report artifacts/playwright-report"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.65.0"
+  }
+}

@@ -1,0 +1,13 @@
+.env
+.DS_Store
+backend/app
+*.log
+node_modules/
+artifacts/
+test-results/
+playwright-report/
+.env.*
+!.env.example
+.ci-env-owner.json
+__pycache__/
+.ci-write-*

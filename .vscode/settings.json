@@ -1,0 +1,10 @@
+{
+  "files.exclude": { "**/.DS_Store": true },
+  "search.exclude": { "**/go.sum": true },
+  "editor.tabSize": 2,
+  "[go]": { "editor.insertSpaces": false, "editor.tabSize": 4 },
+  "terminal.integrated.cwd": "${workspaceFolder}",
+  "terminal.integrated.env.osx": {
+    "PATH": "/Applications/Docker.app/Contents/Resources/bin:${env:PATH}"
+  }
+}
