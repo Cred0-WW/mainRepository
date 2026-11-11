@@ -28,10 +28,15 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Set up Python
-        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
-        with:
-          python-version: "3.12"
+      - name: Use Python on the self-hosted Mac
+        run: |
+          PYTHON_DIR="$HOME/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin"
+          if [ -x "$PYTHON_DIR/python3" ]; then
+            echo "$PYTHON_DIR" >> "$GITHUB_PATH"
+            export PATH="$PYTHON_DIR:$PATH"
+          fi
+          python3 --version
+          python3 -c 'import sys; assert sys.version_info >= (3, 10), "Python 3.10 or newer is required"'
 
       - name: Set up Node.js
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
