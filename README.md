@@ -60,7 +60,7 @@ HTTP используется только для локального учеб�
 4. Собрать и проверить статический ELF64 amd64-бинарник.
 5. Создать DEBIAN/control и .deb с версией из main.go.
 6. Выполнить HTTP POST Debian-пакета в корень hosted APT-репозитория.
-7. Проверить InRelease и SHA256 пакета в Packages.
+7. Дождаться свежего Packages с SHA256 загруженного .deb и согласованных Release/InRelease.
 8. В новом Ubuntu-контейнере выполнить apt-get update и apt-get install,
    проверить dpkg-query, syspulse --version и SHA256 установленного бинарника.
 9. Загрузить .deb и очищенные результаты проверок как GitHub Artifact.
@@ -93,6 +93,10 @@ git push origin release
 
 В YAML также предусмотрен workflow_dispatch. Если GitHub не показывает кнопку
 Run workflow из-за отсутствия этого workflow в основной ветке, используйте push.
+
+Метаданные Nexus обновляются асинхронно: после HTTP 201 скрипт ждёт, пока Packages
+содержит SHA256 нового файла, а Release и InRelease — SHA256 этого Packages.
+Проверка не использует старый индекс после повторной загрузки.
 
 Повторный запуск снова публикует пакет с той же версией. Nexus разрешает redeploy,
 а проверка всегда создаёт новый Ubuntu-контейнер без заранее установленного

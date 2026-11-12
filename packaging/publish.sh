@@ -14,14 +14,26 @@ HTTP_STATUS=$(curl --fail-with-body --silent --show-error --max-time 120 \
     exit 1
   }
 printf 'UPLOAD_HTTP_STATUS=%s\n' "$HTTP_STATUS"
+EXPECTED_DEB_SHA256=$(sha256sum "dist/syspulse_${PKG_VERSION}_amd64.deb" | awk '{print $1}')
+METADATA_READY=false
 for attempt in $(seq 1 30); do
-  if curl --fail --silent --show-error --max-time 15 \
-      "${BASE_URL}/dists/${APT_DIST}/InRelease" -o package-artifacts/InRelease; then
-    break
+  if curl --fail --silent --max-time 15 \
+      "${BASE_URL}/dists/${APT_DIST}/${APT_COMPONENT}/binary-amd64/Packages" -o package-artifacts/Packages \
+      && grep -q "^SHA256: ${EXPECTED_DEB_SHA256}$" package-artifacts/Packages \
+      && curl --fail --silent --max-time 15 "${BASE_URL}/dists/${APT_DIST}/Release" -o package-artifacts/Release \
+      && curl --fail --silent --max-time 15 "${BASE_URL}/dists/${APT_DIST}/InRelease" -o package-artifacts/InRelease; then
+    PACKAGES_SHA256=$(sha256sum package-artifacts/Packages | awk '{print $1}')
+    if grep -Eq "^[[:space:]]*${PACKAGES_SHA256}[[:space:]]+[0-9]+[[:space:]]+${APT_COMPONENT}/binary-amd64/Packages$" package-artifacts/Release \
+        && grep -q "$PACKAGES_SHA256" package-artifacts/InRelease; then
+      METADATA_READY=true
+      break
+    fi
   fi
+  printf 'Waiting for matching signed APT metadata: attempt %s\n' "$attempt"
   sleep 2
 done
-curl --fail --silent --show-error --max-time 30 "${BASE_URL}/dists/${APT_DIST}/Release" -o package-artifacts/Release
-curl --fail --silent --show-error --max-time 30 \
-  "${BASE_URL}/dists/${APT_DIST}/${APT_COMPONENT}/binary-amd64/Packages" -o package-artifacts/Packages
+if [ "$METADATA_READY" != true ]; then
+  echo 'Timed out waiting for signed metadata for the newly uploaded package' >&2
+  exit 1
+fi
 printf 'Package uploaded; signed repository metadata downloaded.\n'
