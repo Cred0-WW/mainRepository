@@ -2,57 +2,37 @@
   "version": "2.0.0",
   "tasks": [
     {
-      "label": "Практическая: запустить и проверить",
+      "label": "Практика 5: собрать и проверить установку через APT",
       "type": "process",
       "command": "/bin/sh",
       "args": [
-        "${workspaceFolder}/scripts/run-local.sh"
+        "${workspaceFolder}/scripts/show-package.sh"
       ],
       "options": {
-        "cwd": "${workspaceFolder}",
-        "env": {
-          "PYTHON_BIN": "${env:HOME}/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3",
-          "NODE_BIN": "${env:HOME}/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node",
-          "PATH": "/Applications/Docker.app/Contents/Resources/bin:${env:HOME}/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin:${env:PATH}"
-        }
+        "cwd": "${workspaceFolder}"
       },
       "group": {
         "kind": "build",
         "isDefault": true
       },
-      "problemMatcher": [],
-      "presentation": {
-        "reveal": "always",
-        "clear": true
-      }
+      "problemMatcher": []
     },
     {
-      "label": "Практическая: открыть страницу",
+      "label": "Практика 5: открыть Nexus",
       "type": "process",
-      "command": "/bin/sh",
+      "command": "/usr/bin/open",
       "args": [
-        "${workspaceFolder}/scripts/project.sh",
-        "open"
+        "http://localhost:8081"
       ],
       "problemMatcher": []
     },
     {
-      "label": "Практическая: логи",
+      "label": "Практика 5: показать метаданные APT",
       "type": "process",
-      "command": "/bin/sh",
+      "command": "/usr/bin/curl",
       "args": [
-        "${workspaceFolder}/scripts/project.sh",
-        "logs"
-      ],
-      "problemMatcher": []
-    },
-    {
-      "label": "Практическая: остановить",
-      "type": "process",
-      "command": "/bin/sh",
-      "args": [
-        "${workspaceFolder}/scripts/project.sh",
-        "stop"
+        "-fsS",
+        "http://localhost:8081/repository/syspulse/dists/stable/Release"
       ],
       "problemMatcher": []
     }

@@ -11,3 +11,9 @@ playwright-report/
 .ci-env-owner.json
 __pycache__/
 .ci-write-*
+
+dist/
+build/
+package-artifacts/
+.env.syspulse
+.env.syspulse.owner

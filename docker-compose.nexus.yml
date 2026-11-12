@@ -1,0 +1,20 @@
+name: syspulsepr5
+services:
+  nexus:
+    image: sonatype/nexus3:3.96.5
+    container_name: nexus
+    ports: ["127.0.0.1:8081:8081"]
+    environment:
+      INSTALL4J_ADD_VM_PARAMS: "-Xms512m -Xmx1536m -XX:MaxDirectMemorySize=1024m -Djava.util.prefs.userRoot=/nexus-data/javaprefs"
+    volumes: ["nexus_data:/nexus-data"]
+    networks: [packages]
+    mem_limit: 3g
+    stop_grace_period: 120s
+    restart: unless-stopped
+networks:
+  packages:
+    name: syspulsepr5_network
+    driver: bridge
+volumes:
+  nexus_data:
+    name: syspulsepr5_nexus_data

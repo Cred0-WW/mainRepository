@@ -1,147 +1,125 @@
-# GitHub Actions и проверка приложения с PostgreSQL
+# Практика 5 Debian пакет syspulse и Nexus APT
 
-Практическая работа Титова Георгия Павловича, группа БСБО-13-25.
+Титов Георгий Павлович, БСБО-13-25.
 
-Workflow собирает приложение на Go, запускает PostgreSQL через Docker Compose и сравнивает записи базы с API и таблицей в настоящем браузере. Задание выполняется на self-hosted runner компьютера Mac. Отчёты и логи сохраняются как GitHub Artifacts без значений секретов.
+Ветка `release` содержит полный цикл сборки Go-программы syspulse версии 1.2.0,
+упаковки в Debian-пакет, публикации в hosted APT-репозиторий Nexus и установки
+через apt в новом контейнере Ubuntu 22.04 amd64. Предыдущие практики сохранены
+в других ветках и в исходных файлах репозитория.
 
-Репозиторий: https://github.com/Cred0-WW/mainRepository
+## Что открыть
 
-Workflow: `.github/workflows/deploy-test.yml`.
+- Nexus: http://localhost:8081
+- Репозиторий пакетов с Mac: http://localhost:8081/repository/syspulse/
+- Внутри Docker-сети: http://nexus:8081/repository/syspulse/
+- Workflow: `.github/workflows/publish-deb.yml`
+- Приложение: `main.go`
+- Сборка и публикация: `packaging/` и `scripts/package_ci.py`
+- Вопросы для защиты: `DEFENSE-PRACTICE5.md`
 
-## Файлы проекта
+Ветка release создана от main. Файлы предыдущего приложения в корне сохранены;
+для этой практики используется `docker-compose.nexus.yml`, а не старый
+`docker-compose.yml`. Docker-проект Nexus называется `syspulsepr5`.
 
-```text
-.github/workflows/deploy-test.yml  рабочий процесс GitHub Actions
-backend/                         сервер Go и многоэтапный Dockerfile
-frontend/                        HTML, CSS и JavaScript страницы
-init/01_seed.sql                  таблица items и начальные записи
-docker-compose.yml               сервисы, сеть и том
-scripts/ci.py                    создание .env и сбор безопасных артефактов
-scripts/run-local.sh              локальный запуск и проверка
-tests/browser.spec.mjs            проверки HTTP, SQL, API и браузерной таблицы
-playwright.config.mjs             настройки Chromium и отчётов
-package.json и package-lock.json  зависимости тестов
-DEFENSE.md                        пояснения и вопросы для защиты
+## Окружение
+
+Nexus 3.96.5 работает в ARM64-контейнере с постоянным томом
+`syspulsepr5_nexus_data` и отдельной bridge-сетью `syspulsepr5_network`.
+Веб-порт опубликован только на 127.0.0.1:8081.
+
+Сам runner работает на Mac. Go 1.27.4, dpkg-deb, curl и GnuPG запускаются
+в Linux-контейнере `syspulse-practice5-tools:1.27.4`. Go кросс-компилирует
+статический бинарник под linux/amd64 с `CGO_ENABLED=0`. Наличие динамического
+загрузчика PT_INTERP в ELF проверяется автоматически и считается ошибкой.
+
+Версия Debian-пакета извлекается из `const Version` в main.go. Она не задаётся
+второй независимой константой. Пакет содержит `/usr/bin/syspulse` с правами 0755
+и владельцем root. Depends на libc6 не добавлен: статическому Go-бинарнику
+не нужна динамическая libc.
+
+## Nexus и подпись
+
+Hosted APT-репозиторий `syspulse` использует distribution `stable`, component
+`main` и writePolicy `ALLOW`, разрешающий повторную публикацию той же версии.
+Publisher имеет только repository-scoped права add, edit, read и browse.
+Администратор Nexus не используется в GitHub Actions.
+
+Метаданные репозитория подписываются отдельным GPG-ключом. В проекте хранится
+только публичный `packaging/syspulse-archive-keyring.gpg`. Закрытый ключ остаётся
+локально и в конфигурации Nexus. Ubuntu подключает репозиторий через signed-by;
+проверка подписи не отключается параметром trusted=yes.
+
+HTTP используется только для локального учебного стенда. Подпись APT обеспечивает
+проверку подписанных метаданных и контрольных сумм загружаемого пакета.
+
+## Workflow
+
+1. Получить код из release.
+2. Подготовить контейнер с Go, dpkg-deb и curl.
+3. Создать временный файл окружения из GitHub Secrets.
+4. Собрать и проверить статический ELF64 amd64-бинарник.
+5. Создать DEBIAN/control и .deb с версией из main.go.
+6. Выполнить HTTP POST Debian-пакета в корень hosted APT-репозитория.
+7. Проверить InRelease и SHA256 пакета в Packages.
+8. В новом Ubuntu-контейнере выполнить apt-get update и apt-get install,
+   проверить dpkg-query, syspulse --version и SHA256 установленного бинарника.
+9. Загрузить .deb и очищенные результаты проверок как GitHub Artifact.
+10. Удалить только созданный этим запуском временный файл учётных данных.
+
+Secrets: `NEXUS_HOST`, `NEXUS_USER`, `NEXUS_PASSWORD`. Для контейнеров значение
+NEXUS_HOST указывает на имя Nexus в общей Docker-сети. Реальные пароли в коде,
+логах и архиве для сдачи не хранятся.
+
+Для одинакового исходного кода SOURCE_DATE_EPOCH берётся из времени последнего
+коммита, изменившего main.go. Используются trimpath, buildvcs=false и фиксированная
+версия Go. Пустой коммит повторного запуска не меняет исходную версию программы.
+
+## Повторный запуск
+
+Docker Desktop и Nexus должны работать. Если runner Offline:
+
+```bash
+cd /Users/georgijtitov/Documents/Codex/github-actions-lesson/work/runner
+./run.sh
 ```
 
-По умолчанию страница доступна по адресу **http://localhost:8082**, JSON — `/api/items`, проверка готовности — `/healthz`.
+Workflow запускается при push в release. Для повторной проверки:
 
-Проект использует отдельное имя Compose `githubactionslesson`, образ `github-actions-lesson-app:1.0.0` и том `githubactionslesson_db_data`. Ранее созданные проекты `dockerlesson` и `dockerlesson-ready` не используются.
-
-## Что нужно на компьютере
-
-- macOS на Apple silicon и доступ в интернет;
-- запущенный Docker Desktop с Docker Compose;
-- Node.js 22 с npm;
-- Python 3.10 или новее; на этом Mac используется установленный Python 3.12;
-- для запуска через GitHub — зарегистрированный runner с доступом к репозиторию.
-
-Go и PostgreSQL отдельно на Mac не нужны: компилятор и база работают в контейнерах. Тесты используют Playwright **1.65.0**. Локальный скрипт может запускать установленный Google Chrome; при его отсутствии устанавливается Chromium для Playwright.
-
-## Локальный запуск
-
-Открой `github-actions-lesson.code-workspace` в VS Code либо всю папку проекта. В её терминале выполни:
-
-```sh
-sh scripts/run-local.sh
+```bash
+git switch release
+git commit --allow-empty -m "Repeat syspulse publication and clean APT verification"
+git push origin release
 ```
 
-Скрипт создаёт `.env`, если файла ещё нет, собирает и запускает сервисы, устанавливает зависимости через `npm ci`, выполняет тесты и собирает результаты в `artifacts/`. При первом создании настроек генерируется случайный пароль. Предварительно копировать `.env.example` не требуется.
+В YAML также предусмотрен workflow_dispatch. Если GitHub не показывает кнопку
+Run workflow из-за отсутствия этого workflow в основной ветке, используйте push.
 
-После запуска открой http://localhost:8082. Если `APP_PORT` изменён, используй соответствующий порт. Скрипт получает фактический адрес у Docker Compose и передаёт его тестам через `BASE_URL`.
+Повторный запуск снова публикует пакет с той же версией. Nexus разрешает redeploy,
+а проверка всегда создаёт новый Ubuntu-контейнер без заранее установленного
+syspulse. Локальный .deb в этот контейнер не монтируется: установка идёт из APT.
 
-`artifacts/` содержит результаты последнего локального прогона. При следующем запуске прежние сгенерированные файлы этой папки удаляются, чтобы старый успешный отчёт не подменил результат новой проверки.
+## Локальная демонстрация
 
-Для обычной остановки после локального запуска:
+Открыть `syspulse-practice5.code-workspace` в VS Code. Задача по умолчанию
+повторно собирает пакет и проверяет установку из Nexus. Пароль издателя для
+чтения APT не требуется. Nexus должен быть уже настроен, а пакет опубликован.
 
-```sh
-docker compose stop
-```
+Программа читает `/proc` внутри Linux-контейнера. Это сведения Linux-окружения
+Docker, а не macOS. Команда `syspulse --version` должна вывести `syspulse 1.2.0`.
 
-Том сохраняет данные после остановки и пересоздания контейнеров. `docker compose down -v` удаляет том с базой и не предназначен для обычной остановки. SQL-файл инициализации выполняется только при создании пустой базы.
+## Отличия от учебного шаблона
 
-## GitHub Secrets
+- dpkg-deb выполняется в Linux, потому что runner установлен на macOS.
+- Версия извлекается Python без GNU grep -P, которого нет в штатном macOS grep.
+- Загрузка выполнена HTTP POST в корень APT-репозитория по документации Sonatype.
+- Политика повторной публикации задаётся writePolicy ALLOW. Поля Maven
+  Snapshot/Release не используются как настройки hosted APT.
+- Nexus требует ключ для подписи APT-метаданных; клиент использует signed-by.
+- Убраны интерактивные флаги -it, чтобы проверка работала в CI без TTY.
 
-В репозитории открой **Settings → Secrets and variables → Actions → New repository secret** и настрой:
+## Источники
 
-| Имя | Назначение |
-|---|---|
-| `DB_USER` | Пользователь PostgreSQL |
-| `DB_PASSWORD` | Пароль пользователя |
-| `DB_NAME` | Имя базы |
-| `APP_PORT` | Порт на компьютере, в этой работе — `8082` |
-
-При использовании существующего тома значения должны соответствовать созданной базе. Смена пароля в Secrets или `.env` сама по себе не меняет пароль пользователя PostgreSQL.
-
-`DB_HOST=db` и `DB_PORT=5432` заданы в Compose: приложение обращается к базе по внутренней сети. `APP_SECRET` и `API_KEY` сервером не используются и не требуются.
-
-Workflow передаёт секреты в окружение шага. `scripts/ci.py create-env` записывает `.env` с правами `0600`, не выводя значения. Файл исключён из Git и контекста сборки. В конце job helper удаляет только созданный им рабочий `.env`; папка runner не должна содержать посторонний личный `.env`.
-
-## Self-hosted runner на Mac
-
-1. Открой **Settings → Actions → Runners → New self-hosted runner** в репозитории.
-2. Выбери macOS и ARM64. Выполни команды загрузки и настройки, которые показывает GitHub.
-3. Добавь метку `github-actions-lesson`. Стандартные метки должны включать `self-hosted`, `macOS` и `ARM64`.
-4. Runner остаётся зарегистрированным в репозитории, но запускается вручную, без фоновой службы.
-5. Запусти `./run.sh` в его папке под пользователем Mac, у которого работает Docker Desktop. Оставь окно открытым на время проверки; для остановки нажми Ctrl+C.
-
-На этом Mac папка runner — `/Users/georgijtitov/Documents/Codex/github-actions-lesson/work/runner`.
-Для ручного запуска открой эту папку в терминале и выполни `./run.sh`; для одного задания — `./run.sh --once`.
-Фоновая служба не установлена. После завершения процесса runner отображается Offline; для следующего запуска его нужно снова запустить вручную.
-Во время проверки компьютер должен бодрствовать, иметь интернет и запущенный Docker Desktop под тем же пользователем.
-
-Регистрационный токен берётся из GitHub при настройке. Его нельзя добавлять в репозиторий, отчёт или артефакты.
-
-На macOS workflow вызывает Docker Compose обычными shell-командами через Docker Desktop. Блоки job `container:` и `services:` здесь не используются.
-
-## Запуск workflow
-
-Workflow настроен на push в `main` и ручной запуск. Для ручного запуска открой **Actions → Docker Compose deployment and browser tests → Run workflow**.
-
-Job `deploy-and-test` выбирает runner с метками `[self-hosted, macOS, ARM64, github-actions-lesson]` и выполняет:
-
-1. Получение исходников, выбор уже установленного Python 3.10+ и настройку Node.js 22.
-2. Проверку Docker Desktop и Compose.
-3. Создание `.env` из Secrets.
-4. Установку зависимостей и Chromium.
-5. `docker compose up -d --build --wait --wait-timeout 120`.
-6. Тестирование командой `npm test`.
-7. Сбор безопасных файлов и загрузку `deployment-<run_id>-<run_attempt>` на 30 дней.
-8. Удаление созданного рабочего `.env`.
-
-Actions закреплены полными commit SHA. `concurrency` ограничивает одновременные развёртывания этого workflow.
-
-Фактический результат смотри в конкретном GitHub run. Локальный успешный тест не подтверждает выполнение GitHub Actions или состояние runner. Runner остаётся зарегистрированным, но Online только пока запущен его процесс и доступен интернет.
-
-## Что проверяют тесты
-
-В `tests/browser.spec.mjs` три проверки:
-
-1. `/healthz` возвращает `200` и `ok`, а обработчик проверяет подключение PostgreSQL.
-2. Независимый SQL-запрос читает все `id` и `name` по порядку `id`. Полученный массив сравнивается с `/api/items` и текстом каждой ячейки реально отрисованной таблицы Chromium.
-3. Кнопка «Обновить список» создаёт новый API-запрос, после которого таблица снова совпадает с базой.
-
-Проверяются значения всех записей, а не только их количество. Браузер обращается к настоящему приложению без подмены API-ответов.
-
-## Артефакты
-
-Скачанный из конкретного GitHub run артефакт содержит:
-
-- `.env`, где каждое значение заменено на `***`;
-- `deployment-logs.txt`, состояние контейнеров и сведения об образе;
-- `test-report.md` и `test-report.json` с режимом и фактическим результатом;
-- `data-comparison.json` с SQL, API и текстом таблицы;
-- `playwright-results.json`, `junit.xml` и HTML-отчёт Playwright;
-- `frontend.png` — снимок настоящего браузера; диагностические файлы при ошибках тестов.
-
-Helper редактирует секреты в текстовых файлах и проверяет подготовленные файлы на наличие значений секретов. Upload разрешён только после успешного сбора и проверки. Рабочий `.env` с паролем не загружается.
-
-## Если запуск не проходит
-
-- **Job ожидает runner:** запусти `./run.sh` в папке runner, проверь Online и совпадение всех меток; оставь окно терминала открытым до завершения job.
-- **Docker недоступен:** открой Docker Desktop под тем же пользователем Mac и дождись готовности.
-- **Порт занят:** выбери свободный `APP_PORT` и согласуй локальные настройки с Secrets.
-- **PostgreSQL не принимает пароль:** проверь параметры существующей базы; новый `.env` не изменяет старый пароль в PostgreSQL.
-- **Тесты упали:** смотри логи, JUnit, Playwright-отчёт и снимок страницы именно этого прогона.
-
-Краткий порядок показа преподавателю и пояснения workflow находятся в `DEFENSE.md`.
+- https://help.sonatype.com/en/apt-repositories.html
+- https://github.com/sonatype/docker-nexus3
+- https://go.dev/dl/
+- https://manpages.debian.org/bookworm/dpkg/dpkg-deb.1.en.html

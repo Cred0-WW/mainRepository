@@ -1,0 +1,4 @@
+ARG GO_VERSION=1.27.4
+FROM golang:${GO_VERSION}-alpine
+RUN apk add --no-cache dpkg curl gnupg
+WORKDIR /workspace
